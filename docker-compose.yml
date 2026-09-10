@@ -1,0 +1,16 @@
+services:
+  database:
+    image: postgres:latest
+    container_name: dw_reyna_db
+    restart: always
+    environment:
+      POSTGRES_DB: db_reyna
+      POSTGRES_USER: reyna
+      POSTGRES_PASSWORD: root
+    ports:
+      - '5425:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -10,7 +10,6 @@ import { FilterCategoryDto } from './dto/filterCategory.dto';
 
 @Injectable()
 export class CategoryService {
-
   constructor(
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
@@ -18,7 +17,10 @@ export class CategoryService {
     private readonly empresaRepository: Repository<Empresa>,
   ) {}
 
-  async create(createCategoryDto: CreateCategoryDto, user: UserActiveInterface) {
+  async create(
+    createCategoryDto: CreateCategoryDto,
+    user: UserActiveInterface,
+  ) {
     const empresa = await this.empresaRepository.findOne({
       where: {
         id_empresa: user.id_empresa,
@@ -48,19 +50,23 @@ export class CategoryService {
     return await this.categoryRepository.save(category);
   }
 
-  async findAll(filterCategoryDto: FilterCategoryDto, user: UserActiveInterface) {
-    const {page, limit, name} = filterCategoryDto;
+  async findAll(
+    filterCategoryDto: FilterCategoryDto,
+    user: UserActiveInterface,
+  ) {
+    const { page, limit, name } = filterCategoryDto;
     const query = this.categoryRepository
-    .createQueryBuilder('category')
-    .leftJoinAndSelect('category.empresa', 'empresa')
-    .where('empresa.id_empresa = :id_empresa', { id_empresa: user.id_empresa });
+      .createQueryBuilder('category')
+      .leftJoinAndSelect('category.empresa', 'empresa')
+      .where('empresa.id_empresa = :id_empresa', {
+        id_empresa: user.id_empresa,
+      });
 
-
-     if (name) {
-    query.andWhere('category.name ILIKE :name', {
-      name: `%${name}%`,
-    });
-  }
+    if (name) {
+      query.andWhere('category.name ILIKE :name', {
+        name: `%${name}%`,
+      });
+    }
 
     const shouldPaginate = !!page && !!limit;
 
@@ -70,16 +76,15 @@ export class CategoryService {
 
     const [data, total] = await query.getManyAndCount();
 
-    return{
+    return {
       data,
       meta: {
         total,
         page: page ?? null,
         limit: limit ?? null,
         totalPages: shouldPaginate ? Math.ceil(total / limit) : null,
-      }
-    }
-
+      },
+    };
   }
 
   async findOne(id: number, user: UserActiveInterface) {
@@ -97,7 +102,11 @@ export class CategoryService {
     return category;
   }
 
-  async update(id: number, updateCategoryDto: UpdateCategoryDto, user: UserActiveInterface) {
+  async update(
+    id: number,
+    updateCategoryDto: UpdateCategoryDto,
+    user: UserActiveInterface,
+  ) {
     const category = await this.findOne(id, user);
     if (!category) {
       throw new BadRequestException('Category no encontrada');
@@ -126,5 +135,20 @@ export class CategoryService {
       throw new BadRequestException('Category no encontrada');
     }
     return await this.categoryRepository.remove(category);
+  }
+
+  async findAllNameCategory(user: UserActiveInterface) {
+    const categories = await this.categoryRepository.find({
+      where: {
+        empresa: {
+          id_empresa: user.id_empresa,
+        },
+      },
+      select: {
+        id_category: true,
+        name: true,
+      },
+    });
+    return categories;
   }
 }

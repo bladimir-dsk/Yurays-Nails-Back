@@ -1,15 +1,24 @@
-import { Empresa } from "@/empresa/entities/empresa.entity";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
-
+import { Empresa } from '@/empresa/entities/empresa.entity';
+import { Product } from '@/product/entities/product.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('categories')
 export class Category {
-
   @PrimaryGeneratedColumn()
-  id_category: number
+  id_category: number;
 
   @Column()
-  name: string
+  name: string;
+
+  @OneToMany(() => Product, (product) => product.category)
+  products: Product[];
 
   @ManyToOne(() => Empresa, (empresa) => empresa.categories)
   @JoinColumn({ name: 'id_empresa' })

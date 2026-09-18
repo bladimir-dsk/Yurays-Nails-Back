@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CategoryModule } from './category/category.module';
+import { ProductModule } from './product/product.module';
 
 
 dotenv.config();
@@ -44,6 +45,7 @@ dotenv.config();
     AuthModule,
     EmpresaModule,
     CategoryModule,
+    ProductModule,
 
   ],
   controllers: [],

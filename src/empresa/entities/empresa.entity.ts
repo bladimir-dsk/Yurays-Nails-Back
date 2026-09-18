@@ -1,4 +1,5 @@
 import { Category } from '@/category/entities/category.entity';
+import { Product } from '@/product/entities/product.entity';
 import { User } from '@/users/entities/user.entity';
 import {
   Column,
@@ -27,4 +28,7 @@ export class Empresa {
 
   @OneToMany(() => Category, (category) => category.empresa)
   categories: Category[];
+
+  @OneToMany(() => Product, (product) => product.empresa)
+  products: Product[];
 }

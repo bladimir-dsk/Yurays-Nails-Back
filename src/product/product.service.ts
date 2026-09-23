@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -175,5 +179,23 @@ export class ProductService {
       throw new BadRequestException('Producto no encontrado');
     }
     return await this.productRepository.remove(product);
+  }
+
+  async findByCode(code: string, user: UserActiveInterface): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: {
+        code,
+        empresa: { id_empresa: user.id_empresa },
+      },
+      relations: ['category'],
+    });
+
+    if (!product) {
+      throw new BadRequestException(
+        `No existe un producto con el código "${code}"`,
+      );
+    }
+
+    return product;
   }
 }

@@ -10,6 +10,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CategoryModule } from './category/category.module';
 import { ProductModule } from './product/product.module';
+import { SaleModule } from './sale/sale.module';
+import { SaleDetailModule } from './sale-detail/sale-detail.module';
 
 
 dotenv.config();
@@ -46,6 +48,8 @@ dotenv.config();
     EmpresaModule,
     CategoryModule,
     ProductModule,
+    SaleModule,
+    SaleDetailModule,
 
   ],
   controllers: [],

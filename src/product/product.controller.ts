@@ -46,6 +46,14 @@ export class ProductController {
     return this.productService.findAll(filterProductDto, user);
   }
 
+  @Get('by-code/:code')
+  findByCode(
+    @Param('code') code: string,
+    @ActiveUser() user: UserActiveInterface,
+  ) {
+    return this.productService.findByCode(code, user);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: number, @ActiveUser() user: UserActiveInterface) {
     return this.productService.findOne(+id, user);

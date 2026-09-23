@@ -1,10 +1,12 @@
 import { Category } from '@/category/entities/category.entity';
 import { Empresa } from '@/empresa/entities/empresa.entity';
+import { SaleDetail } from '@/sale-detail/entities/sale-detail.entity';
 import {
   Column,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -41,4 +43,7 @@ export class Product {
 
   @Column({ nullable: true })
   creatorName: string;
+
+  @OneToMany(() => SaleDetail, (detail) => detail.product)
+  saleDetails: SaleDetail[];
 }

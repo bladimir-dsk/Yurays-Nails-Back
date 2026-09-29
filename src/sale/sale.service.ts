@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { Between, DataSource, Repository } from 'typeorm';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { Sale } from './entities/sale.entity';
@@ -118,6 +118,8 @@ export class SaleService {
       .leftJoinAndSelect('sale.empresa', 'empresa')
       .leftJoinAndSelect('sale.details', 'details')
       .leftJoinAndSelect('details.product', 'product')
+      //ordenar
+      .orderBy('sale.createdAt', 'DESC')
       .where('empresa.id_empresa = :id_empresa', {
         id_empresa: user.id_empresa,
       });
@@ -187,5 +189,97 @@ export class SaleService {
       await manager.remove(sale);
       return { message: `Venta #${id} eliminada y stock restaurado` };
     });
+  }
+
+  ///cuantas ventas ya hubo por dia con el createdAt y cuanto dinero ya ahi ganado con el campo total.
+
+  // GET /sale/stats/daily
+  async getDailyStats(user: UserActiveInterface, from?: string, to?: string) {
+    const end = to ? new Date(`${to}T23:59:59.999`) : new Date();
+    const start = from ? new Date(`${from}T00:00:00`) : new Date(end);
+    if (!from) {
+      start.setDate(end.getDate() - 29);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    const rows = await this.saleRepository
+      .createQueryBuilder('sale')
+      .innerJoin('sale.empresa', 'empresa')
+      .select("TO_CHAR(DATE(sale.createdAt), 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(sale.id_sale)', 'total_sales')
+      .addSelect('COALESCE(SUM(sale.total), 0)', 'total_amount')
+      .where('empresa.id_empresa = :id_empresa', {
+        id_empresa: user.id_empresa,
+      })
+      .andWhere('sale.createdAt BETWEEN :start AND :end', { start, end })
+      .groupBy('DATE(sale.createdAt)')
+      .orderBy('DATE(sale.createdAt)', 'ASC')
+      .getRawMany();
+
+    const data = rows.map((r) => ({
+      date: r.date,
+      total_sales: Number(r.total_sales),
+      total_amount: Number(r.total_amount),
+    }));
+
+    return {
+      data,
+      summary: {
+        total_sales: data.reduce((acc, d) => acc + d.total_sales, 0),
+        total_amount: data.reduce((acc, d) => acc + d.total_amount, 0),
+      },
+    };
+  }
+
+  // GET /sale/stats/weekly
+  async getWeeklySales(user: UserActiveInterface, date?: string) {
+    const ref = date ? new Date(`${date}T00:00:00`) : new Date();
+
+    // Lunes de la semana
+    const dayOfWeek = ref.getDay(); // 0 = domingo
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const start = new Date(ref);
+    start.setDate(ref.getDate() + diff);
+    start.setHours(0, 0, 0, 0);
+
+    // Domingo de la semana
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+
+    const sales = await this.saleRepository.find({
+      where: {
+        empresa: { id_empresa: user.id_empresa },
+        createdAt: Between(start, end),
+      },
+      select: {
+        id_sale: true,
+        sale_number: true,
+        createdAt: true,
+        total: true,
+      },
+      order: { createdAt: 'ASC' },
+    });
+
+    const dias = [
+      'domingo',
+      'lunes',
+      'martes',
+      'miércoles',
+      'jueves',
+      'viernes',
+      'sábado',
+    ];
+
+    return {
+      week: { start, end },
+      data: sales.map((s) => ({
+        id_sale: s.id_sale,
+        sale_number: s.sale_number,
+        createdAt: s.createdAt,
+        day: dias[new Date(s.createdAt).getDay()],
+        total: Number(s.total),
+      })),
+    };
   }
 }

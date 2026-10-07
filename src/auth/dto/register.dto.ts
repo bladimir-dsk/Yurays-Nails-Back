@@ -22,7 +22,7 @@ export class RegisterDto {
   //transform nos sirve para validar que no envien espacios en blanco
   @Transform(({ value }) => value.trim()) //el value.trim limpia los caracteres en blanco
   @IsString()
-  @MinLength(6)
+  @MinLength(8)
   password: string;
 
   @ApiProperty()

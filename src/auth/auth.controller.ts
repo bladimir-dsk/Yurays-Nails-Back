@@ -1,16 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-  Req,
-  Patch,
-  Param,
-  ParseIntPipe,
-  ValidationPipe,
-  UsePipes,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -22,6 +10,7 @@ import { ActiveUser } from '@/common/decorators/active-user.decorator';
 import { UserActiveInterface } from '@/common/interfaces/user-active.interface';
 
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 //creamos una interfaz para poner el reques del profile y extender el reques
 interface RequestWithUser extends Request {
@@ -43,6 +32,8 @@ export class AuthController {
   ) {
     return this.authService.register(registerDto);
   }
+
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('login') //generamos el token de acceso del usuario
   login(
     @Body()

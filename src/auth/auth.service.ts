@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import { UsersService } from '@/users/users.service';
 import { RegisterDto } from './dto/register.dto';
-import * as bcryptjs from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { UserActiveInterface } from '@/common/interfaces/user-active.interface';
+import { Throttle } from '@nestjs/throttler';
 
+@Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
 @Injectable()
 export class AuthService {
   constructor(
@@ -30,7 +32,7 @@ export class AuthService {
     }
 
     // Hashear la contraseña
-    const hashedPassword = await bcryptjs.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Crear el usuario sin empresa (por ahora)
     const userData = {
@@ -54,7 +56,7 @@ export class AuthService {
       );
     }
 
-    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('La contraseña no es correcta');
     }

@@ -9,12 +9,17 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CategoryModule } from './category/category.module';
-
+import { ProductModule } from './product/product.module';
+import { SaleModule } from './sale/sale.module';
+import { SaleDetailModule } from './sale-detail/sale-detail.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 dotenv.config();
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
@@ -44,9 +49,11 @@ dotenv.config();
     AuthModule,
     EmpresaModule,
     CategoryModule,
-
+    ProductModule,
+    SaleModule,
+    SaleDetailModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

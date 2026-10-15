@@ -198,4 +198,64 @@ export class ProductService {
 
     return product;
   }
+
+  ///filtrar todos los productos separados por categoria
+  async findAllByCategory(user: UserActiveInterface) {
+    const products = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoin('product.category', 'category')
+      .select([
+        'product.id_product',
+        'product.code',
+        'product.name',
+        'product.price',
+        'product.stock',
+        'category.id_category',
+        'category.name',
+      ])
+      .where('product.empresa = :id_empresa', {
+        id_empresa: user.id_empresa,
+      })
+      .orderBy('category.name', 'ASC')
+      .addOrderBy('product.name', 'ASC')
+      .getMany();
+
+    return products.reduce(
+      (acc, product) => {
+        const categoryId = product.category.id_category;
+
+        if (!acc[categoryId]) {
+          acc[categoryId] = {
+            id_category: categoryId,
+            name: product.category.name,
+            products: [],
+          };
+        }
+
+        acc[categoryId].products.push({
+          id_product: product.id_product,
+          code: product.code,
+          name: product.name,
+          price: product.price,
+          stock: product.stock,
+        });
+
+        return acc;
+      },
+      {} as Record<
+        number,
+        {
+          id_category: number;
+          name: string;
+          products: {
+            id_product: number;
+            code: string;
+            name: string;
+            price: number;
+            stock: number;
+          }[];
+        }
+      >,
+    );
+  }
 }

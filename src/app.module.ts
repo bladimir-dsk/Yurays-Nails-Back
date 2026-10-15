@@ -12,6 +12,7 @@ import { CategoryModule } from './category/category.module';
 import { ProductModule } from './product/product.module';
 import { SaleModule } from './sale/sale.module';
 import { SaleDetailModule } from './sale-detail/sale-detail.module';
+import { CajaModule } from './caja/caja.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -52,6 +53,7 @@ dotenv.config();
     ProductModule,
     SaleModule,
     SaleDetailModule,
+    CajaModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

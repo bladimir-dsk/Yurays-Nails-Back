@@ -2,6 +2,7 @@ import { Category } from '@/category/entities/category.entity';
 import { Product } from '@/product/entities/product.entity';
 import { Sale } from '@/sale/entities/sale.entity';
 import { User } from '@/users/entities/user.entity';
+import { CajaDiaria } from '@/caja/entities/caja-diaria.entity';
 import {
   Column,
   CreateDateColumn,
@@ -35,4 +36,7 @@ export class Empresa {
 
   @OneToMany(() => Sale, (sale) => sale.empresa)
   sales: Sale[];
+
+  @OneToMany(() => CajaDiaria, (caja) => caja.empresa)
+  cajas: CajaDiaria[];
 }

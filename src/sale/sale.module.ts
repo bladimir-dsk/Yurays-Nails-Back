@@ -6,9 +6,13 @@ import { Sale } from './entities/sale.entity';
 import { Empresa } from '@/empresa/entities/empresa.entity';
 import { Product } from '@/product/entities/product.entity';
 import { SaleDetail } from '@/sale-detail/entities/sale-detail.entity';
+import { CajaModule } from '@/caja/caja.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Sale, Empresa, Product, SaleDetail])],
+  imports: [
+    TypeOrmModule.forFeature([Sale, Empresa, Product, SaleDetail]),
+    CajaModule,
+  ],
   controllers: [SaleController],
   providers: [SaleService],
   exports: [SaleService],

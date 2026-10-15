@@ -13,6 +13,7 @@ import { Product } from '@/product/entities/product.entity';
 import { Empresa } from '@/empresa/entities/empresa.entity';
 import { UserActiveInterface } from '@/common/interfaces/user-active.interface';
 import { FilterSaleDto } from './dto/filterSale.dto';
+import { CajaService } from '@/caja/caja.service';
 
 @Injectable()
 export class SaleService {
@@ -23,6 +24,7 @@ export class SaleService {
     @InjectRepository(SaleDetail)
     private saleDetailRepository: Repository<SaleDetail>,
     private dataSource: DataSource,
+    private cajaService: CajaService,
   ) {}
 
   async create(createSaleDto: CreateSaleDto, user: UserActiveInterface) {
@@ -33,8 +35,14 @@ export class SaleService {
       throw new BadRequestException('Empresa no encontrada');
     }
 
+    const caja = await this.cajaService.getCajaDelDia(user);
+    if (caja.estado === 'cerrada') {
+      throw new BadRequestException(
+        'La caja del día está cerrada. Debe abrirla antes de realizar ventas.',
+      );
+    }
+
     return this.dataSource.transaction(async (manager) => {
-      // 1. Folio consecutivo (por empresa, si quieres foliar por empresa)
       const lastSale = await manager
         .createQueryBuilder(Sale, 'sale')
         .where('sale.id_empresa = :id_empresa', {
@@ -44,22 +52,20 @@ export class SaleService {
         .getOne();
 
       const nextNumber = (lastSale?.id_sale ?? 0) + 1;
-      const sale_number = `V-${nextNumber.toString().padStart(6, '0')}`;
+      const saleNumber = `V-${nextNumber.toString().padStart(6, '0')}`;
 
-      // 2. Crear la venta (total en 0 por ahora)
-      const sale = manager.create(Sale, {
-        sale_number,
+      const newSale = manager.create(Sale, {
+        sale_number: saleNumber,
         empresa,
         creatorUser: user.email ?? user.id.toString(),
         creatorName: user.name ?? undefined,
         total: 0,
       });
-      await manager.save(sale);
+      await manager.save(newSale);
 
       let total = 0;
       const details: SaleDetail[] = [];
 
-      // 3. Recorrer los productos del carrito
       for (const item of createSaleDto.items) {
         const product = await manager.findOne(Product, {
           where: {
@@ -83,29 +89,35 @@ export class SaleService {
         const subtotal = Number(product.price) * item.quantity;
         total += subtotal;
 
-        const detail = manager.create(SaleDetail, {
-          sale,
-          product,
-          quantity: item.quantity,
-          unit_price: product.price,
-          subtotal,
-        });
-        details.push(detail);
+        details.push(
+          manager.create(SaleDetail, {
+            sale: newSale,
+            product,
+            quantity: item.quantity,
+            unit_price: product.price,
+            subtotal,
+          }),
+        );
 
-        // 4. Descontar stock
         product.stock -= item.quantity;
         await manager.save(product);
       }
 
       await manager.save(details);
 
-      // 5. Actualizar total de la venta
-      sale.total = total;
-      await manager.save(sale);
+      newSale.total = total;
+      await manager.save(newSale);
 
-      // 6. Devolver la venta completa con relaciones
+      await this.cajaService.registrarVenta(
+        total,
+        newSale.id_sale,
+        saleNumber,
+        user,
+        manager,
+      );
+
       return manager.findOne(Sale, {
-        where: { id_sale: sale.id_sale },
+        where: { id_sale: newSale.id_sale },
         relations: ['details', 'details.product', 'empresa'],
       });
     });
@@ -118,7 +130,6 @@ export class SaleService {
       .leftJoinAndSelect('sale.empresa', 'empresa')
       .leftJoinAndSelect('sale.details', 'details')
       .leftJoinAndSelect('details.product', 'product')
-      //ordenar
       .orderBy('sale.createdAt', 'DESC')
       .where('empresa.id_empresa = :id_empresa', {
         id_empresa: user.id_empresa,
@@ -163,9 +174,6 @@ export class SaleService {
   }
 
   update(id: number, updateSaleDto: UpdateSaleDto) {
-    // Ojo: actualizar una venta (agregar/quitar productos) implica
-    // recalcular stock y total. Normalmente en un POS no se "edita"
-    // una venta, se cancela y se crea una nueva. Ver nota abajo.
     return `This action updates a #${id} sale`;
   }
 
@@ -180,18 +188,31 @@ export class SaleService {
         throw new NotFoundException(`Venta #${id} no encontrada`);
       }
 
-      // Regresar el stock al cancelar/eliminar la venta
+      const saleTotal = Number(sale.total);
+      const saleNumber = sale.sale_number;
+
       for (const detail of sale.details) {
         detail.product.stock += detail.quantity;
         await manager.save(detail.product);
       }
 
       await manager.remove(sale);
+
+      await this.cajaService.addMovimiento(
+        null,
+        {
+          monto: saleTotal,
+          tipo: 'salida',
+          descripcion: 'Venta eliminada/cancelada',
+          referencia: saleNumber,
+        },
+        user,
+        manager,
+      );
+
       return { message: `Venta #${id} eliminada y stock restaurado` };
     });
   }
-
-  ///cuantas ventas ya hubo por dia con el createdAt y cuanto dinero ya ahi ganado con el campo total.
 
   // GET /sale/stats/daily
   async getDailyStats(user: UserActiveInterface, from?: string, to?: string) {
@@ -236,13 +257,12 @@ export class SaleService {
     const ref = date ? new Date(`${date}T00:00:00`) : new Date();
 
     // Lunes de la semana
-    const dayOfWeek = ref.getDay(); // 0 = domingo
+    const dayOfWeek = ref.getDay();
     const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const start = new Date(ref);
     start.setDate(ref.getDate() + diff);
     start.setHours(0, 0, 0, 0);
 
-    // Domingo de la semana
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
     end.setHours(23, 59, 59, 999);

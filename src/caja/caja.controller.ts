@@ -4,7 +4,7 @@ import { CreateCajaDto } from './dto/create-caja.dto';
 import { CreateMovimientoDto } from './dto/create-movimiento.dto';
 import { Role } from '@/common/enums/rol.enum';
 import { Auth } from '@/auth/decorators/auth.decorator';
-import { ApiBearerAuth, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { ActiveUser } from '@/common/decorators/active-user.decorator';
 import { UserActiveInterface } from '@/common/interfaces/user-active.interface';
 import { FilterBoxDto } from './dto/filterBox.dto';
@@ -50,12 +50,9 @@ export class CajaController {
   }
 
   @Get('fecha/:fecha')
-  @ApiQuery({
-    name: 'fecha',
-    required: true,
-    type: String,
-    example: '2026-10-13',
-  })
+  
+
+  @ApiParam({ name: 'fecha', type: String, example: '2026-10-13' })
   getCajaByFecha(
     @Param('fecha') fecha: string,
     @ActiveUser() user: UserActiveInterface,

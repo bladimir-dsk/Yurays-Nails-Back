@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository, Between } from 'typeorm';
 import { CreateCajaDto } from './dto/create-caja.dto';
 import { CreateMovimientoDto } from './dto/create-movimiento.dto';
 import { CajaDiaria } from './entities/caja-diaria.entity';
@@ -91,22 +91,25 @@ export class CajaService {
   }
 
   async getCajaByFecha(fecha: string, user: UserActiveInterface) {
-    const fechaDate = dayjs(fecha).startOf('day').toDate();
-
-    const caja = await this.cajaRepository.findOne({
-      where: {
-        empresa: { id_empresa: user.id_empresa },
-        fecha: fechaDate,
-      },
-      relations: ['movimientos'],
-    });
-
-    if (!caja) {
-      throw new NotFoundException(`No hay caja para la fecha ${fecha}`);
-    }
-
-    return caja;
+  const dia = dayjs(fecha, 'YYYY-MM-DD', true); // true = formato estricto
+  if (!dia.isValid()) {
+    throw new BadRequestException('Fecha inválida, usa el formato YYYY-MM-DD');
   }
+
+  const caja = await this.cajaRepository.findOne({
+    where: {
+      empresa: { id_empresa: user.id_empresa },
+      fecha: Between(dia.startOf('day').toDate(), dia.endOf('day').toDate()),
+    },
+    relations: ['movimientos'],
+  });
+
+  if (!caja) {
+    throw new NotFoundException(`No hay caja para la fecha ${fecha}`);
+  }
+
+  return caja;
+}
 
   async findAll(user: UserActiveInterface, filterBoxDto: FilterBoxDto) {
     const { page, limit } = filterBoxDto;

@@ -50,9 +50,12 @@ export class CajaController {
   }
 
   @Get('fecha/:fecha')
-  
-
-  @ApiParam({ name: 'fecha', type: String, example: '2026-10-13' })
+  @ApiQuery({
+    name: 'fecha',
+    required: true,
+    type: String,
+    example: '2026-10-13',
+  })
   getCajaByFecha(
     @Param('fecha') fecha: string,
     @ActiveUser() user: UserActiveInterface,

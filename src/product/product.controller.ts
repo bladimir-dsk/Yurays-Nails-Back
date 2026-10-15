@@ -54,6 +54,11 @@ export class ProductController {
     return this.productService.findByCode(code, user);
   }
 
+  @Get('by-category')
+  findAllByCategory(@ActiveUser() user: UserActiveInterface) {
+    return this.productService.findAllByCategory(user);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: number, @ActiveUser() user: UserActiveInterface) {
     return this.productService.findOne(+id, user);
